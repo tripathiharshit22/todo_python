@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+        }
+        #task-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        #task-list li {
+            background-color: #fff;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .completed {
+            text-decoration: line-through;
+            color: gray;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        button.delete-btn {
+            background-color: #f44336;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>My To-Do List</h1>
+
+    <div>
+        <input type="text" id="task-input" placeholder="Add a new task..." />
+        <button id="add-task-btn">Add Task</button>
+    </div>
+
+    <ul id="task-list"></ul>
+
+    <script>
+        // ✅ Backend URL (Python server)
+        const API_URL = "http://127.0.0.1:8080";
+
+        const taskInput = document.getElementById('task-input');
+        const taskList = document.getElementById('task-list');
+        const addTaskButton = document.getElementById('add-task-btn');
+
+        let tasks = [];
+
+        // Render tasks
+        function renderTasks() {
+            taskList.innerHTML = '';
+            tasks.forEach((task, index) => {
+                const li = document.createElement('li');
+                li.className = task.completed ? 'completed' : '';
+                li.innerHTML = `
+                    <span>${task.text}</span>
+                    <div>
+                        <button onclick="toggleComplete(${index})">${task.completed ? 'Undo' : 'Complete'}</button>
+                        <button class="delete-btn" onclick="deleteTask(${index})">Delete</button>
+                    </div>
+                `;
+                taskList.appendChild(li);
+            });
+        }
+
+        // Add task
+        function addTask() {
+            const taskText = taskInput.value.trim();
+            if (taskText !== '') {
+                tasks.push({ text: taskText, completed: false });
+                taskInput.value = '';
+                renderTasks();
+                saveTasksToFile();
+            }
+        }
+
+        // Toggle complete/undo
+        function toggleComplete(index) {
+            tasks[index].completed = !tasks[index].completed;
+            renderTasks();
+            saveTasksToFile();
+        }
+
+        // Delete task
+        function deleteTask(index) {
+            tasks.splice(index, 1);
+            renderTasks();
+            saveTasksToFile();
+        }
+
+        // Load tasks from backend
+        async function loadTasks() {
+            try {
+                const response = await fetch(`${API_URL}/get-tasks`);
+                if (response.ok) {
+                    tasks = await response.json();
+                    renderTasks();
+                } else {
+                    console.error("Error loading tasks:", response.statusText);
+                }
+            } catch (error) {
+                console.error("Error loading tasks:", error);
+            }
+        }
+
+        // Save tasks to backend
+        async function saveTasksToFile() {
+            try {
+                const response = await fetch(`${API_URL}/save-tasks`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(tasks),
+                });
+                if (!response.ok) {
+                    console.error('Error saving tasks:', response.statusText);
+                }
+            } catch (error) {
+                console.error('Error saving tasks:', error);
+            }
+        }
+
+        // Event listeners
+        addTaskButton.addEventListener('click', addTask);
+        taskInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addTask();
+        });
+
+        // Load tasks on page load
+        window.onload = loadTasks;
+    </script>
+
+</body>
+</html>
